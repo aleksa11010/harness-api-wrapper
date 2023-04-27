@@ -1,15 +1,18 @@
 package main
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"flag"
+	"fmt"
 )
 
 func main() {
-	app := fiber.New()
+	accountArg := flag.String("account", "", "Provide your account ID.")
+	apiKeyArg := flag.String("api-key", "", "Provide your API Key.")
+	formatArg := flag.String("format", "json", "Provide the output format, defaults to json. Options: json, csv, yaml ")
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
-	})
+	flag.Parse()
 
-	app.Listen(":3000")
+	fmt.Println("Account:", *accountArg)
+	fmt.Println("API Key:", *apiKeyArg)
+	fmt.Println("Format:", *formatArg)
 }
