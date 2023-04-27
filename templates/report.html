@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Harness Overview Report</title>
+        <style>
+        body {
+            background-color: #87CEEB;
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        h1 {
+            color: #333;
+            font-size: 2rem;
+        }
+        ul {
+            background-color: #fff;
+            padding: 1rem;
+            border-radius: 5px;
+            list-style-type: none;
+            overflow-wrap: break-word;
+        }
+        li {
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+        .collapsible {
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .content {
+            display: none;
+        }
+        .bold {
+            font-weight: bold;
+            margin-right: 0.5em;
+        }
+        .button {
+            display: inline-block;
+            padding: 0.8em 1.5em;
+            margin: 0.5em;
+            background-color: #f2f2f2;
+            color: #333;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.2s ease-in-out;
+        }
+    
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .button-blue {
+            background-color: #3498DB;
+            color: #fff;
+        }
+        #scroll-to-top {
+	    	position: fixed;
+	    	right: 20px;
+	    	bottom: 20px;
+	    	display: none;
+	    	padding: 10px;
+	    	background-color: #87CEEB;
+	    	color: #fff;
+	    	border-radius: 50%;
+	    	border: none;
+	    	cursor: pointer;
+	    	}
+        
+	    #scroll-to-top:hover {
+	    	background-color: #ffffff;
+	    }
+    </style>
+    </head>
+    <body>
+        <p><a href="../index.html" class="button button-blue">Return</a></p>
+        <h1>{{ .Header }}</h1>
+        <ul id="json-data"></ul>
+        <script>
+        const reportData = {{ .Content }};
+        
+
+        const createList = (data) => {
+        const list = document.createElement("ul");
+        for (const key in data) {
+          if (data.hasOwnProperty(key)) {
+            const item = document.createElement("li");
+            if (key === "users") {
+              const wrapper = document.createElement("li");
+              const collapsible = document.createElement("div");
+              collapsible.textContent = key + " : (click to expand/collapse)";
+              collapsible.classList.add("collapsible");
+              wrapper.appendChild(collapsible);
+            
+              const usersList = createList(data[key]);
+              usersList.classList.add("content");
+              wrapper.appendChild(usersList);
+            
+              item.appendChild(wrapper);
+            
+              collapsible.addEventListener("click", () => {
+                usersList.classList.toggle("content");
+              });
+            } else if (key === "permissions") {
+              const wrapper = document.createElement("li");
+              const collapsible = document.createElement("div");
+              collapsible.textContent = key + " : (click to expand/collapse)";
+              collapsible.classList.add("collapsible");
+              wrapper.appendChild(collapsible);
+            
+              const usersList = createList(data[key]);
+              usersList.classList.add("content");
+              wrapper.appendChild(usersList);
+            
+              item.appendChild(wrapper);
+            
+              collapsible.addEventListener("click", () => {
+                usersList.classList.toggle("content");
+              });
+            } else if (typeof data[key] === "object" && !Array.isArray(data[key])) {
+              const nestedList = createList(data[key]);
+              if (data[key] === null) {
+                item.innerHTML = key + ': <span class="bold">(empty)</span>';
+              } else if (Object.keys(data[key]).length > 0) {
+                item.textContent = key + ":";
+                item.appendChild(nestedList);
+              } else {
+                item.innerHTML = key + ': <span class="bold">(empty)</span>';
+              }
+            } else if (
+              Array.isArray(data[key]) &&
+              data[key].length > 0 &&
+              typeof data[key][0] === "object"
+            ) {
+              item.textContent = key + ":";
+              data[key].forEach((element) => {
+                const nestedList = createList(element);
+                const wrapper = document.createElement("li");
+                wrapper.appendChild(nestedList);
+                item.appendChild(wrapper);
+              });
+            } else {
+              if (data[key] === null) {
+                item.innerHTML = key + ': <span class="bold">(empty)</span>';
+              } else {
+                item.innerHTML =
+                  key + ": " + '<span class="bold">' + data[key] + "</span>";
+              }
+            }
+            list.appendChild(item);
+          }
+        }
+        return list;
+      };
+
+        
+        const loadJSON = () => {
+            try {
+                const jsonData = reportData;
+                const listContainer = document.getElementById('json-data');
+                const dataList = createList(jsonData);
+                listContainer.appendChild(dataList);
+            } catch (error) {
+                console.error('Error parsing JSON data:', error);
+            }
+        };
+
+        loadJSON();
+        window.onscroll = function() {
+			if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+				document.getElementById("scroll-to-top").style.display = "block";
+			} else {
+				document.getElementById("scroll-to-top").style.display = "none";
+			}
+		};
+
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("scroll-to-top").addEventListener("click", function() {
+                document.body.scrollTop = 0; // For Safari
+                document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+          });
+        }); 
+    </script>
+        <button id="scroll-to-top">
+            <svg width="64px" height="64px" class="svg-icon" style="fill:
+                currentColor;overflow: hidden;" viewBox="0 0 1024 1024"
+                version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M513
+                    103.7c-226.1 0-409.4 183.3-409.4 409.4S286.9 922.6 513
+                    922.6s409.4-183.3 409.4-409.4S739.1 103.7 513 103.7z m153.5
+                    364.7c-5.2 5.3-12.1 7.9-19 7.9s-13.8-2.6-19-7.9L545.1 385c0
+                    0.4 0.1 0.7 0.1 1.1V705c0 11.1-5.7 20.9-14.4 26.6-4.7
+                    4.2-10.9 6.7-17.7 6.7-6.8
+                    0-13-2.5-17.7-6.7-8.7-5.7-14.4-15.5-14.4-26.6V386.1c0-0.4
+                    0-0.7 0.1-1.1l-83.4 83.4c-10.5 10.5-27.5 10.5-38
+                    0s-10.5-27.5 0-38L494 295.9c10.5-10.5 27.5-10.5 38 0l134.5
+                    134.5c10.5 10.4 10.5 27.5 0 38z" fill="#3259CE" /></svg>
+            </button>
+        </body>
+    </html>

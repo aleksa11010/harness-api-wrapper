@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -9,7 +10,8 @@ import (
 )
 
 type HarnessAPI interface {
-	GetAllConnectors() ([]Connectors, error)
+	// GetAllConnectors() ([]Connectors, error)
+	GetAllUserGroups() ([]UserGroups, error)
 }
 
 type APIRequest struct {
@@ -18,26 +20,32 @@ type APIRequest struct {
 	APIKey  string
 }
 
+type Entities struct {
+	EntityType   string
+	EntityResult interface{}
+}
+
 type EntityResult interface{}
 
-func (a *APIRequest) GetAccountOverview(callCount int, callFuncs []func(string) (EntityResult, error), format string) (EntityResult, error) {
+func (a *APIRequest) GetAccountOverview(callCount int, callFuncs []func(string, string) (Entities, error), format string, account string) ([]Entities, error) {
 	type result struct {
-		response EntityResult
-		err      error
+		entityResponse Entities
+		err            error
 	}
 
 	results := make(chan result)
-	progressBar := pb.StartNew(callCount)
+	tmpl := `{{ blue "Calling Harness API: " }} {{ bar . "<" "-" (cycle . "↖" "↗" "↘" "↙" ) "." ">"}} {{percent .}} `
+	bar := pb.ProgressBarTemplate(tmpl).Start(callCount)
 
 	var wg sync.WaitGroup
 	wg.Add(callCount)
 
 	for _, callFunc := range callFuncs {
-		go func(callFunc func(string) (EntityResult, error)) {
+		go func(callFunc func(string, string) (Entities, error)) {
 			defer wg.Done()
-			resp, err := callFunc(format)
-			results <- result{response: resp, err: err}
-			progressBar.Increment()
+			resp, err := callFunc(format, account)
+			results <- result{entityResponse: resp, err: err}
+			bar.Increment()
 		}(callFunc)
 	}
 
@@ -46,26 +54,125 @@ func (a *APIRequest) GetAccountOverview(callCount int, callFuncs []func(string) 
 		close(results)
 	}()
 
-	responses := make([]EntityResult, 0, callCount)
+	responses := make([]Entities, 0, callCount)
 	for res := range results {
 		if res.err != nil {
-			progressBar.Finish()
+			bar.Finish()
 			return nil, res.err
 		}
-		responses = append(responses, res)
+		responses = append(responses, res.entityResponse)
 	}
 
-	progressBar.Finish()
+	bar.Finish()
 	return responses, nil
 }
 
-func (api *APIRequest) GetAllConnectors(format string) (EntityResult, error) {
-	resp, err := api.Client.R().Get(api.BaseURL + "/gateways")
+func (api *APIRequest) GetAllUserGroups(format string, account string) (Entities, error) {
+	resp, err := api.Client.R().
+		SetHeader("x-api-key", api.APIKey).
+		Get(api.BaseURL + "/ng/api/user-groups?accountIdentifier=" + account + "&filterType=INCLUDE_CHILD_SCOPE_GROUPS&pageSize=1000")
 	if err != nil {
-		return nil, err
+		return Entities{}, err
 	}
 
-	fmt.Println(resp.String())
+	userGroups := UserGroups{}
+	err = json.Unmarshal([]byte(resp.String()), &userGroups)
+	if err != nil {
+		fmt.Printf("Error: %+v\n", err)
+		return Entities{}, err
+	}
 
-	return []Connectors{}, nil
+	entity := Entities{
+		EntityType:   "UserGroups",
+		EntityResult: userGroups,
+	}
+
+	return entity, nil
+}
+
+func (api *APIRequest) GetAllRoleAssignments(format string, account string) (Entities, error) {
+	resp, err := api.Client.R().
+		SetHeader("x-api-key", api.APIKey).
+		Get(api.BaseURL + "/authz/api/roleassignments?accountIdentifier=" + account)
+	if err != nil {
+		return Entities{}, err
+	}
+
+	roleAssignment := RoleAssignments{}
+	err = json.Unmarshal([]byte(resp.String()), &roleAssignment)
+	if err != nil {
+		fmt.Printf("Error: %+v\n", err)
+		return Entities{}, err
+	}
+	entity := Entities{
+		EntityType:   "RoleAssignments",
+		EntityResult: roleAssignment,
+	}
+
+	return entity, nil
+}
+
+func (api *APIRequest) GetAllResourceGroups(format string, account string) (Entities, error) {
+	resp, err := api.Client.R().
+		SetHeader("x-api-key", api.APIKey).
+		Get(api.BaseURL + "/authz/api/roleassignments?accountIdentifier=" + account)
+	if err != nil {
+		return Entities{}, err
+	}
+
+	resourceGroups := ResourceGroup{}
+	err = json.Unmarshal([]byte(resp.String()), &resourceGroups)
+	if err != nil {
+		fmt.Printf("Error: %+v\n", err)
+		return Entities{}, err
+	}
+
+	entity := Entities{
+		EntityType:   "ResourceGroups",
+		EntityResult: resourceGroups,
+	}
+
+	return entity, nil
+}
+
+func (api *APIRequest) GetAllRoles(format string, account string) (Entities, error) {
+	resp, err := api.Client.R().
+		SetHeader("x-api-key", api.APIKey).
+		Get(api.BaseURL + "/authz/api/roles?accountIdentifier=" + account + "&pageSize=500")
+	if err != nil {
+		return Entities{}, err
+	}
+
+	roles := Roles{}
+	err = json.Unmarshal([]byte(resp.String()), &roles)
+	if err != nil {
+		fmt.Printf("Error: %+v\n", err)
+		return Entities{}, err
+	}
+
+	entity := Entities{
+		EntityType:   "Roles",
+		EntityResult: roles,
+	}
+
+	return entity, nil
+}
+
+func (api *APIRequest) GetAllConnectors(format string) (Entities, error) {
+	resp, err := api.Client.R().Post(api.BaseURL + "/gateway")
+	if err != nil {
+		return Entities{}, err
+	}
+	connectors := Connectors{}
+	err = json.Unmarshal(resp.Body(), &connectors)
+	if err != nil {
+		return Entities{}, err
+	}
+
+	entity := Entities{
+		EntityType:   "Connectors",
+		EntityResult: connectors,
+	}
+
+	return entity, nil
 }
