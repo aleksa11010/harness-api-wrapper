@@ -50,11 +50,14 @@
     <a href="./data/rolessignments.html" class="button button-blue">Role Assignments</a>
     <a href="./data/resourcegroups.html" class="button button-blue">Resource Groups</a>
     <a href="./data/users.html" class="button button-blue">Users</a>
+    <a href="./data/projects.html" class="button button-blue">Projects</a>
+    <a href="./data/organizations.html" class="button button-blue">Organizations</a>
   </div>
   <div class="container">
     <p>Custom Reports are found below.</p>
-    <a href="#" class="button button-blue" onclick="showAlert()">Admin Users</a>
-    <a href="#" class="button button-blue" onclick="showAlert()">Overpermissioned Roles</a>
+    {{ if .AdminUsers}}
+    <a href="./data/adminusers.html" class="button button-blue">Admin Users</a>
+    {{ end }}
   </div>
 
   <script>

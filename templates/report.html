@@ -92,7 +92,7 @@
         for (const key in data) {
           if (data.hasOwnProperty(key)) {
             const item = document.createElement("li");
-            if (key === "users") {
+            if (key === "users" || key === "permissions" || key === "gitDetails") {
               const wrapper = document.createElement("li");
               const collapsible = document.createElement("div");
               collapsible.textContent = key + " : (click to expand/collapse)";
@@ -108,39 +108,7 @@
               collapsible.addEventListener("click", () => {
                 usersList.classList.toggle("content");
               });
-            } else if (key === "permissions") {
-              const wrapper = document.createElement("li");
-              const collapsible = document.createElement("div");
-              collapsible.textContent = key + " : (click to expand/collapse)";
-              collapsible.classList.add("collapsible");
-              wrapper.appendChild(collapsible);
-            
-              const usersList = createList(data[key]);
-              usersList.classList.add("content");
-              wrapper.appendChild(usersList);
-            
-              item.appendChild(wrapper);
-            
-              collapsible.addEventListener("click", () => {
-                usersList.classList.toggle("content");
-              });
-            }else if (key === "gitDetails") {
-              const wrapper = document.createElement("li");
-              const collapsible = document.createElement("div");
-              collapsible.textContent = key + " : (click to expand/collapse)";
-              collapsible.classList.add("collapsible");
-              wrapper.appendChild(collapsible);
-            
-              const usersList = createList(data[key]);
-              usersList.classList.add("content");
-              wrapper.appendChild(usersList);
-            
-              item.appendChild(wrapper);
-            
-              collapsible.addEventListener("click", () => {
-                usersList.classList.toggle("content");
-              });
-            }else if (typeof data[key] === "object" && !Array.isArray(data[key])) {
+            } else if (typeof data[key] === "object" && !Array.isArray(data[key])) {
               const nestedList = createList(data[key]);
               if (data[key] === null) {
                 item.innerHTML = key + ': <span class="bold">(empty)</span>';

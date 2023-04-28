@@ -20,6 +20,13 @@ type UserGroups struct {
 	CorrelationID string        `json:"correlationId"`
 }
 
+type UserGroupsFiltered struct {
+	Status        string             `json:"status"`
+	Data          []UserGroupContent `json:"data"`
+	MetaData      interface{}        `json:"metaData"`
+	CorrelationID string             `json:"correlationId"`
+}
+
 type UserGroupData struct {
 	TotalPages    int64              `json:"totalPages"`
 	TotalItems    int64              `json:"totalItems"`
@@ -48,6 +55,7 @@ type UserGroupAccountIdentifier string
 
 type UserGroupAPI interface {
 	GetAllUserGroups(format string, account string) (Entities, error)
+	GetAdminUsers(format string, account string) (Entities, error)
 }
 
 func (u UserGroups) FormatUserGroups() error {
@@ -66,7 +74,7 @@ func (u UserGroups) FormatUserGroups() error {
 		fmt.Println("Unable to marshal json", err)
 		return err
 	}
-	err = createUserGroupReport(reportData)
+	err = createUserGroupReport(reportData, "usergroups", "User Groups")
 	if err != nil {
 		fmt.Println("Unable to create a HTML output :", err)
 		return err
@@ -74,14 +82,70 @@ func (u UserGroups) FormatUserGroups() error {
 	return nil
 }
 
-func createUserGroupReport(content []byte) error {
+func (u UserGroupsFiltered) FormatUserGroupsFiltered() error {
+
+	content := make([]json.RawMessage, 0)
+	for _, userGroup := range u.Data {
+		group, err := json.Marshal(userGroup)
+		if err != nil {
+			fmt.Printf("error marshalling user group: %s", err)
+		}
+		content = append(content, json.RawMessage(group))
+	}
+
+	reportData, err := json.Marshal(content)
+	if err != nil {
+		fmt.Println("Unable to marshal json", err)
+		return err
+	}
+	err = createUserGroupReport(reportData, "adminusers", "User Groups")
+	if err != nil {
+		fmt.Println("Unable to create a HTML output :", err)
+		return err
+	}
+	return nil
+}
+
+func (u UserGroupsFiltered) ListAdminUsers(admins map[string]UsersContent) error {
+	content := make([]json.RawMessage, 0)
+	for _, userGroup := range u.Data {
+		for _, u := range userGroup.Users {
+			if admins[u].Email == "" {
+				continue
+			}
+			user, err := json.Marshal(admins[u])
+			if err != nil {
+				fmt.Printf("error marshalling user group: %s", err)
+			}
+			content = append(content, json.RawMessage(user))
+		}
+	}
+
+	reportData, err := json.Marshal(content)
+	if err != nil {
+		fmt.Println("Unable to marshal json", err)
+		return err
+	}
+
+	err = createUserGroupReport(reportData, "adminusers", "Admins")
+	if err != nil {
+		fmt.Println("Unable to create a HTML output :", err)
+	}
+	return nil
+}
+
+func createUserGroupReport(content []byte, filename string, header string) error {
 	type ReportData struct {
 		Header  string
 		Content string
 	}
 
+	type IndexData struct {
+		AdminUsers bool
+	}
+
 	reportData := ReportData{
-		Header:  "User Groups",
+		Header:  header,
 		Content: string(content),
 	}
 
@@ -90,13 +154,45 @@ func createUserGroupReport(content []byte) error {
 		fmt.Printf("error reading user groups template: %s", err)
 	}
 
+	indexTemplate, err := fs.ReadFile(templates.EmbeddedFiles, "index.html")
+	if err != nil {
+		fmt.Printf("error reading index template: %s", err)
+	}
+
 	t, err := template.New("usergroups").Parse(string(userGroupsTemplate))
 	if err != nil {
 		fmt.Printf("error parsing user groups template: %s", err)
 		return err
 	}
 
+	it, err := template.New("index").Parse(string(indexTemplate))
+	if err != nil {
+		fmt.Printf("error parsing index template: %s", err)
+		return err
+	}
+
 	var output bytes.Buffer
+
+	err = it.Execute(&output, IndexData{
+		AdminUsers: true,
+	})
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	indexFile, err := os.OpenFile("./report/index.html", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer indexFile.Close()
+
+	_, err = indexFile.Write(output.Bytes())
+	if err != nil {
+		panic(err)
+	}
+	output.Reset()
+
 	err = t.Execute(&output, reportData)
 	if err != nil {
 		fmt.Println(err)
@@ -116,7 +212,7 @@ func createUserGroupReport(content []byte) error {
 		}
 	}
 
-	file, err := os.OpenFile("./report/data/usergroups.html", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(fmt.Sprintf("./report/data/%s.html", filename), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}

@@ -125,19 +125,6 @@ func createRoleAssingmentsReport(content []byte) error {
 		return err
 	}
 
-	if _, err := os.Stat("report"); os.IsNotExist(err) {
-		err = os.Mkdir("report", 0755)
-		if err != nil {
-			panic("Unable to create directory")
-		}
-	}
-	if _, err := os.Stat("report/data"); os.IsNotExist(err) {
-		err = os.Mkdir("report/data", 0755)
-		if err != nil {
-			panic("Unable to create directory")
-		}
-	}
-
 	file, err := os.OpenFile("./report/data/rolessignments.html", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
