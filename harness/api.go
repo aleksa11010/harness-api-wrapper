@@ -3,6 +3,7 @@ package harness
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/cheggaaa/pb/v3"
@@ -115,12 +116,12 @@ func (api *APIRequest) GetAllRoleAssignments(format string, account string) (Ent
 func (api *APIRequest) GetAllResourceGroups(format string, account string) (Entities, error) {
 	resp, err := api.Client.R().
 		SetHeader("x-api-key", api.APIKey).
-		Get(api.BaseURL + "/authz/api/roleassignments?accountIdentifier=" + account)
+		Get(api.BaseURL + "/resourcegroup/api/v2/resourcegroup?accountIdentifier=" + account + "&pageSize=500")
 	if err != nil {
 		return Entities{}, err
 	}
 
-	resourceGroups := ResourceGroup{}
+	resourceGroups := ResourceGroups{}
 	err = json.Unmarshal([]byte(resp.String()), &resourceGroups)
 	if err != nil {
 		fmt.Printf("Error: %+v\n", err)
@@ -158,8 +159,71 @@ func (api *APIRequest) GetAllRoles(format string, account string) (Entities, err
 	return entity, nil
 }
 
-func (api *APIRequest) GetAllConnectors(format string) (Entities, error) {
-	resp, err := api.Client.R().Post(api.BaseURL + "/gateway")
+func (api *APIRequest) GetAllUsers(format string, account string) (Entities, error) {
+	resp, err := api.Client.R().
+		SetHeader("x-api-key", api.APIKey).
+		SetHeader("Content-Type", "application/json").
+		SetBody(`{"filterType": "INCLUDE_CHILD_SCOPE_GROUPS"}`).
+		Post(api.BaseURL + "/ng/api/user/batch?accountIdentifier=" + account + "&pageSize=100")
+	if err != nil {
+		return Entities{}, err
+	}
+
+	users := Users{}
+	err = json.Unmarshal([]byte(resp.String()), &users)
+	if err != nil {
+		fmt.Printf("Error: %+v\n", err)
+		return Entities{}, err
+	}
+	userData := []UsersData{}
+	if users.Data.TotalPages > 1 && users.Data.PageIndex < users.Data.TotalPages {
+		userData = append(userData, users.Data)
+		for i := users.Data.PageIndex + 1; i < users.Data.TotalPages; i++ {
+			resp, err := api.Client.R().
+				SetHeader("x-api-key", api.APIKey).
+				SetHeader("Content-Type", "application/json").
+				SetBody(`{"filterType": "INCLUDE_CHILD_SCOPE_GROUPS"}`).
+				Post(api.BaseURL + "/ng/api/user/batch?accountIdentifier=" + account + "&pageSize=100&pageIndex=" + strconv.FormatInt(i, 10))
+			if err != nil {
+				return Entities{}, err
+			}
+			err = json.Unmarshal([]byte(resp.String()), &users)
+			if err != nil {
+				fmt.Printf("Error: %+v\n", err)
+				return Entities{}, err
+			}
+
+			userData = append(userData, users.Data)
+		}
+
+		combinedReport := UsersData{}
+		for _, user := range userData {
+			combinedReport.Content = append(combinedReport.Content, user.Content...)
+		}
+
+		users.Data = combinedReport
+		entity := Entities{
+			EntityType:   "Users",
+			EntityResult: users,
+		}
+
+		return entity, nil
+	}
+
+	entity := Entities{
+		EntityType:   "Roles",
+		EntityResult: users,
+	}
+
+	return entity, nil
+}
+
+func (api *APIRequest) GetAllConnectors(format string, account string) (Entities, error) {
+	resp, err := api.Client.R().
+		SetHeader("x-api-key", api.APIKey).
+		SetHeader("Content-Type", "application/json").
+		SetBody(`{"filterType": "Connector"}`).
+		Post(api.BaseURL + "//ng/api/connectors/listV2?accountIdentifier=" + account + "&pageSize=500")
 	if err != nil {
 		return Entities{}, err
 	}

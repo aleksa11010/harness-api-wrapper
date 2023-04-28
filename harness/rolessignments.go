@@ -78,7 +78,7 @@ func (ra RoleAssignments) FormatRoleAssingment() error {
 	for _, ras := range ra.Data.Content {
 		r, err := json.Marshal(ras)
 		if err != nil {
-			fmt.Printf("error marshalling user group: %s", err)
+			fmt.Printf("error marshalling : %s", err)
 		}
 		content = append(content, json.RawMessage(r))
 	}
@@ -103,7 +103,7 @@ func createRoleAssingmentsReport(content []byte) error {
 	}
 
 	reportData := ReportData{
-		Header:  "Roles",
+		Header:  "Role Assignments",
 		Content: string(content),
 	}
 
@@ -138,7 +138,7 @@ func createRoleAssingmentsReport(content []byte) error {
 		}
 	}
 
-	file, err := os.OpenFile("./report/data/roleassingments.html", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile("./report/data/rolessignments.html", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}

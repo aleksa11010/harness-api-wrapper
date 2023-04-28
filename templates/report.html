@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Harness Overview Report</title>
+        <title>Entity Report</title>
         <style>
         body {
             background-color: #87CEEB;
@@ -124,7 +124,23 @@
               collapsible.addEventListener("click", () => {
                 usersList.classList.toggle("content");
               });
-            } else if (typeof data[key] === "object" && !Array.isArray(data[key])) {
+            }else if (key === "gitDetails") {
+              const wrapper = document.createElement("li");
+              const collapsible = document.createElement("div");
+              collapsible.textContent = key + " : (click to expand/collapse)";
+              collapsible.classList.add("collapsible");
+              wrapper.appendChild(collapsible);
+            
+              const usersList = createList(data[key]);
+              usersList.classList.add("content");
+              wrapper.appendChild(usersList);
+            
+              item.appendChild(wrapper);
+            
+              collapsible.addEventListener("click", () => {
+                usersList.classList.toggle("content");
+              });
+            }else if (typeof data[key] === "object" && !Array.isArray(data[key])) {
               const nestedList = createList(data[key]);
               if (data[key] === null) {
                 item.innerHTML = key + ': <span class="bold">(empty)</span>';
@@ -135,11 +151,8 @@
                 item.innerHTML = key + ': <span class="bold">(empty)</span>';
               }
             } else if (
-              Array.isArray(data[key]) &&
-              data[key].length > 0 &&
-              typeof data[key][0] === "object"
-            ) {
-              item.textContent = key + ":";
+              Array.isArray(data[key]) && data[key].length > 0 && typeof data[key][0] === "object") {
+              item.textContent = (parseInt(key) + 1) + ":";
               data[key].forEach((element) => {
                 const nestedList = createList(element);
                 const wrapper = document.createElement("li");

@@ -1,5 +1,16 @@
 package harness
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/fs"
+	"os"
+	"text/template"
+
+	"github.com/aleksa11010/harness-api-wrapper/templates"
+)
+
 type Connectors struct {
 	Status        ConnectorStatusEnum `json:"status"`
 	Data          ConnectorData       `json:"data"`
@@ -308,4 +319,84 @@ func (c Connector) String() string {
 
 type ConnectorAPI interface {
 	GetAllConnectors() ([]Connector, error)
+}
+
+func (c Connectors) FormatConnectors() error {
+
+	content := make([]json.RawMessage, 0)
+	for _, con := range c.Data.Content {
+		c, err := json.Marshal(con)
+		if err != nil {
+			fmt.Printf("error marshalling user group: %s", err)
+		}
+		content = append(content, json.RawMessage(c))
+	}
+
+	reportData, err := json.Marshal(content)
+	if err != nil {
+		fmt.Println("Unable to marshal json", err)
+		return err
+	}
+	err = createConnectorsReport(reportData)
+	if err != nil {
+		fmt.Println("Unable to create a HTML output :", err)
+		return err
+	}
+	return nil
+}
+
+func createConnectorsReport(content []byte) error {
+	type ReportData struct {
+		Header  string
+		Content string
+	}
+
+	reportData := ReportData{
+		Header:  "Connectors",
+		Content: string(content),
+	}
+
+	rgTemplate, err := fs.ReadFile(templates.EmbeddedFiles, "report.html")
+	if err != nil {
+		fmt.Printf("error reading template: %s", err)
+	}
+
+	t, err := template.New("connectors").Parse(string(rgTemplate))
+	if err != nil {
+		fmt.Printf("error parsing template: %s", err)
+		return err
+	}
+
+	var output bytes.Buffer
+	err = t.Execute(&output, reportData)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	if _, err := os.Stat("report"); os.IsNotExist(err) {
+		err = os.Mkdir("report", 0755)
+		if err != nil {
+			panic("Unable to create directory")
+		}
+	}
+	if _, err := os.Stat("report/data"); os.IsNotExist(err) {
+		err = os.Mkdir("report/data", 0755)
+		if err != nil {
+			panic("Unable to create directory")
+		}
+	}
+
+	file, err := os.OpenFile("./report/data/connectors.html", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	_, err = file.Write(output.Bytes())
+	if err != nil {
+		panic(err)
+	}
+
+	return nil
 }

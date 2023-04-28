@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Landing Page</title>
+  <title>Harness Account Overview - Main</title>
   <style>
     body {
       background-color: #87CEEB;
@@ -44,9 +44,24 @@
   <div class="container">
     <h1>Harness Account Overview</h1>
     <p>Click the buttons below to access your desired report.</p>
+    <a href="./data/connectors.html" class="button button-blue">Connectors</a>
     <a href="./data/usergroups.html" class="button button-blue">User Groups</a>
     <a href="./data/roles.html" class="button button-blue">Roles</a>
     <a href="./data/rolessignments.html" class="button button-blue">Role Assignments</a>
+    <a href="./data/resourcegroups.html" class="button button-blue">Resource Groups</a>
+    <a href="./data/users.html" class="button button-blue">Users</a>
   </div>
+  <div class="container">
+    <p>Custom Reports are found below.</p>
+    <a href="#" class="button button-blue" onclick="showAlert()">Admin Users</a>
+    <a href="#" class="button button-blue" onclick="showAlert()">Overpermissioned Roles</a>
+  </div>
+
+  <script>
+    function showAlert() {
+        alert("Not implemented");
+    }
+  </script>
+  
 </body>
 </html>

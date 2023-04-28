@@ -16,6 +16,7 @@ func main() {
 	accountArg := flag.String("account", "", "Provide your account ID.")
 	apiKeyArg := flag.String("api-key", "", "Provide your API Key.")
 	formatArg := flag.String("format", "json", "Provide the output format, defaults to json. Options: json, csv, yaml ")
+	adminUsersArg := flag.Bool("admin-users", false, "Custome report to return admin users.")
 
 	flag.Parse()
 
@@ -35,6 +36,8 @@ func main() {
 		api.GetAllResourceGroups,
 		api.GetAllRoles,
 		api.GetAllRoleAssignments,
+		api.GetAllUsers,
+		api.GetAllConnectors,
 	}
 	entities, _ := api.GetAccountOverview(len(apiCalls), apiCalls, *formatArg, *accountArg)
 	tmpl := `{{ green "Generating report: " }} {{ bar . "<" "-" (cycle . "↖" "↗" "↘" "↙" ) "." ">"}} {{percent .}} `
@@ -46,12 +49,24 @@ func main() {
 		case "UserGroups":
 			_ = entity.EntityResult.(harness.UserGroups).FormatUserGroups()
 			fmt.Println("Generated report for User Groups!")
+		case "Users":
+			_ = entity.EntityResult.(harness.Users).FormatUsers()
+			if *adminUsersArg {
+				fmt.Println(color.RedString("Report for Admin Users not implemented yet!"))
+			}
+			fmt.Println("Generated report for Users!")
 		case "Roles":
 			_ = entity.EntityResult.(harness.Roles).FormatRoles()
 			fmt.Println("Generated report for Roles!")
 		case "RoleAssignments":
 			_ = entity.EntityResult.(harness.RoleAssignments).FormatRoleAssingment()
 			fmt.Println("Generated report for Role Assignments!")
+		case "ResourceGroups":
+			_ = entity.EntityResult.(harness.ResourceGroups).FormatResourceGroups()
+			fmt.Println("Generated report for Resource Groups!")
+		case "Connectors":
+			_ = entity.EntityResult.(harness.Connectors).FormatConnectors()
+			fmt.Println("Generated report for Connectors!")
 		default:
 			fmt.Println(color.RedString("No format function found for entity type: "), color.HiRedString(entity.EntityType))
 
